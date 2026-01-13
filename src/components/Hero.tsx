@@ -60,24 +60,6 @@ const Hero = () => {
             </Button>
           </motion.div>
 
-          {/* Stats */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="grid grid-cols-3 gap-8 mt-16 max-w-xl mx-auto"
-          >
-            {[
-              { value: "10K+", label: "Projects Built" },
-              { value: "50ms", label: "Avg Response" },
-              { value: "99.9%", label: "Uptime" },
-            ].map((stat, i) => (
-              <div key={i} className="text-center">
-                <div className="text-2xl md:text-3xl font-bold gradient-text">{stat.value}</div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
-              </div>
-            ))}
-          </motion.div>
         </motion.div>
       </div>
     </section>
