@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, ArrowRight, Sparkles, FolderOpen } from "lucide-react";
+import { useProjectApi } from "@/hooks/useProjectApi";
 
 interface Project {
   id: string;
@@ -12,6 +13,7 @@ interface Project {
 
 const Projects = () => {
   const navigate = useNavigate();
+  const { onProjectCreated, onProjectDeleted } = useProjectApi();
   const [projects, setProjects] = useState<Project[]>(() => {
     const saved = localStorage.getItem("fusion-projects");
     return saved ? JSON.parse(saved) : [];
@@ -23,7 +25,7 @@ const Projects = () => {
     localStorage.setItem("fusion-projects", JSON.stringify(projects));
   }, [projects]);
 
-  const createProject = () => {
+  const createProject = async () => {
     if (!newProjectName.trim()) return;
     
     const newProject: Project = {
@@ -35,11 +37,17 @@ const Projects = () => {
     setProjects([newProject, ...projects]);
     setNewProjectName("");
     setIsCreating(false);
+    
+    // Call API when project is created
+    await onProjectCreated(newProject.id, newProject.name);
   };
 
-  const deleteProject = (id: string, e: React.MouseEvent) => {
+  const deleteProject = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setProjects(projects.filter((p) => p.id !== id));
+    
+    // Call API when project is deleted
+    await onProjectDeleted(id);
   };
 
   const openProject = (id: string) => {
