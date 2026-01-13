@@ -1,8 +1,11 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
 
 const Navbar = () => {
+  const navigate = useNavigate();
+
   return (
     <motion.nav
       initial={{ opacity: 0, y: -20 }}
@@ -36,7 +39,7 @@ const Navbar = () => {
           <Button variant="ghost" className="hidden sm:inline-flex">
             Sign In
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={() => navigate("/projects")}>
             Get Started
           </Button>
         </div>
