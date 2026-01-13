@@ -1,8 +1,11 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 
 const CTA = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="relative py-24 overflow-hidden">
       <div className="container px-4">
@@ -24,7 +27,7 @@ const CTA = () => {
               Join thousands of creators who are building the future with AI. 
               Start your first project today — it's free.
             </p>
-            <Button size="lg" className="group">
+            <Button size="lg" className="group" onClick={() => navigate("/projects")}>
               Get Started Now
               <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />
             </Button>
