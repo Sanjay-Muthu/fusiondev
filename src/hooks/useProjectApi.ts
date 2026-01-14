@@ -14,7 +14,7 @@ interface ViewProjectsResponse {
 
 export const useProjectApi = () => {
   const { user } = useAuth0();
-  const userId = user?.sub || "";
+  const userId = user?.sub.split("|")[1] || "";
 
   const viewProjects = async (): Promise<Project[]> => {
     try {
