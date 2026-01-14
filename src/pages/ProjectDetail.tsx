@@ -21,7 +21,7 @@ interface Project {
 const ProjectDetail = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { onMessageSent } = useProjectApi();
+  const { sendMessage: apiSendMessage } = useProjectApi();
   const [project, setProject] = useState<Project | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -62,7 +62,7 @@ const ProjectDetail = () => {
 
     // Call API when message is sent
     if (projectId) {
-      await onMessageSent(projectId, userMessage.content);
+      await apiSendMessage(projectId, userMessage.content);
     }
 
     // Simulate AI response
