@@ -1,66 +1,120 @@
-const PLACEHOLDER_API_URL = "https://api.placeholder.example.com";
+import { useAuth0 } from "@auth0/auth0-react";
 
-interface ApiPayload {
-  type: "project_created" | "project_deleted" | "message_sent";
-  projectId?: string;
-  projectName?: string;
-  messageContent?: string;
-  timestamp: string;
+const API_URL = "https://ideal-garbanzo-6p5q4j4x97p3wpq-5000.app.github.dev/api";
+
+export interface Project {
+  id: string;
+  name: string;
+  createdAt: Date;
+}
+
+interface ViewProjectsResponse {
+  projects: Project[];
 }
 
 export const useProjectApi = () => {
-  const callApi = async (payload: ApiPayload) => {
+  const { user } = useAuth0();
+  const userId = user?.sub || "";
+
+  const viewProjects = async (): Promise<Project[]> => {
     try {
-      console.log("API Call:", payload);
-      
-      // Placeholder API call - replace URL with your actual endpoint
-      const response = await fetch(PLACEHOLDER_API_URL, {
+      const response = await fetch(`${API_URL}/view_projects`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ user_id: userId }),
       });
-      
-      // Log response for debugging (will fail with placeholder URL)
-      console.log("API Response status:", response.status);
-      return response;
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch projects: ${response.status}`);
+      }
+
+      const data: ViewProjectsResponse = await response.json();
+      return data.projects.map((p) => ({
+        ...p,
+        createdAt: new Date(p.createdAt),
+      }));
     } catch (error) {
-      // Expected to fail with placeholder URL - log for debugging
-      console.log("API call attempted (placeholder URL):", payload);
-      return null;
+      console.error("Error fetching projects:", error);
+      throw error;
     }
   };
 
-  const onProjectCreated = (projectId: string, projectName: string) => {
-    return callApi({
-      type: "project_created",
-      projectId,
-      projectName,
-      timestamp: new Date().toISOString(),
-    });
+  const createProject = async (projectId: string, projectName: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_URL}/create_project`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          project_id: projectId,
+          project_name: projectName,
+          user_id: userId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create project: ${response.status}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error creating project:", error);
+      throw error;
+    }
   };
 
-  const onProjectDeleted = (projectId: string) => {
-    return callApi({
-      type: "project_deleted",
-      projectId,
-      timestamp: new Date().toISOString(),
-    });
+  const deleteProject = async (projectId: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_URL}/delete_project`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          project_id: projectId,
+          user_id: userId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete project: ${response.status}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      throw error;
+    }
   };
 
-  const onMessageSent = (projectId: string, messageContent: string) => {
-    return callApi({
-      type: "message_sent",
-      projectId,
-      messageContent,
-      timestamp: new Date().toISOString(),
-    });
+  const sendMessage = async (projectId: string, messageContent: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_URL}/message_sent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          project_id: projectId,
+          message_content: messageContent,
+          user_id: userId,
+        }),
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error("Error sending message:", error);
+      return false;
+    }
   };
 
   return {
-    onProjectCreated,
-    onProjectDeleted,
-    onMessageSent,
+    viewProjects,
+    createProject,
+    deleteProject,
+    sendMessage,
   };
 };

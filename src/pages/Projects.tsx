@@ -2,52 +2,90 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, ArrowRight, Sparkles, FolderOpen } from "lucide-react";
-import { useProjectApi } from "@/hooks/useProjectApi";
+import { Plus, Trash2, ArrowRight, Sparkles, FolderOpen, Loader2 } from "lucide-react";
+import { useProjectApi, Project } from "@/hooks/useProjectApi";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
-interface Project {
-  id: string;
-  name: string;
-  createdAt: Date;
-}
+const ProjectSkeleton = () => (
+  <div className="glass-card p-6 flex items-center justify-between">
+    <div className="flex items-center gap-4">
+      <Skeleton className="w-10 h-10 rounded-lg" />
+      <div>
+        <Skeleton className="h-5 w-40 mb-2" />
+        <Skeleton className="h-4 w-24" />
+      </div>
+    </div>
+    <Skeleton className="w-5 h-5" />
+  </div>
+);
 
 const Projects = () => {
   const navigate = useNavigate();
-  const { onProjectCreated, onProjectDeleted } = useProjectApi();
-  const [projects, setProjects] = useState<Project[]>(() => {
-    const saved = localStorage.getItem("fusion-projects");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const { viewProjects, createProject, deleteProject } = useProjectApi();
+  const [projects, setProjects] = useState<Project[]>([]);
   const [newProjectName, setNewProjectName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    localStorage.setItem("fusion-projects", JSON.stringify(projects));
-  }, [projects]);
-
-  const createProject = async () => {
-    if (!newProjectName.trim()) return;
-    
-    const newProject: Project = {
-      id: crypto.randomUUID(),
-      name: newProjectName.trim(),
-      createdAt: new Date(),
+    const fetchProjects = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const fetchedProjects = await viewProjects();
+        setProjects(fetchedProjects);
+      } catch (err) {
+        setError("Failed to load projects. Please try again.");
+        toast.error("Failed to load projects");
+      } finally {
+        setIsLoading(false);
+      }
     };
-    
-    setProjects([newProject, ...projects]);
-    setNewProjectName("");
-    setIsCreating(false);
-    
-    // Call API when project is created
-    await onProjectCreated(newProject.id, newProject.name);
+
+    fetchProjects();
+  }, []);
+
+  const handleCreateProject = async () => {
+    if (!newProjectName.trim()) return;
+
+    const projectId = crypto.randomUUID();
+    const projectName = newProjectName.trim();
+
+    setIsSubmitting(true);
+
+    try {
+      await createProject(projectId, projectName);
+      
+      const newProject: Project = {
+        id: projectId,
+        name: projectName,
+        createdAt: new Date(),
+      };
+
+      setProjects([newProject, ...projects]);
+      setNewProjectName("");
+      setIsCreating(false);
+      toast.success("Project created successfully!");
+    } catch (err) {
+      toast.error("Failed to create project. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const deleteProject = async (id: string, e: React.MouseEvent) => {
+  const handleDeleteProject = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setProjects(projects.filter((p) => p.id !== id));
-    
-    // Call API when project is deleted
-    await onProjectDeleted(id);
+
+    try {
+      await deleteProject(id);
+      setProjects(projects.filter((p) => p.id !== id));
+      toast.success("Project deleted");
+    } catch (err) {
+      toast.error("Failed to delete project");
+    }
   };
 
   const openProject = (id: string) => {
@@ -96,12 +134,22 @@ const Projects = () => {
                   placeholder="Project name..."
                   value={newProjectName}
                   onChange={(e) => setNewProjectName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && createProject()}
+                  onKeyDown={(e) => e.key === "Enter" && !isSubmitting && handleCreateProject()}
                   autoFocus
-                  className="flex-1 bg-background/50 border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  disabled={isSubmitting}
+                  className="flex-1 bg-background/50 border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
                 />
-                <Button onClick={createProject}>Create</Button>
-                <Button variant="ghost" onClick={() => setIsCreating(false)}>
+                <Button onClick={handleCreateProject} disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create"
+                  )}
+                </Button>
+                <Button variant="ghost" onClick={() => setIsCreating(false)} disabled={isSubmitting}>
                   Cancel
                 </Button>
               </div>
@@ -118,7 +166,23 @@ const Projects = () => {
 
           {/* Projects List */}
           <div className="space-y-4">
-            {projects.length === 0 ? (
+            {isLoading ? (
+              // Loading skeletons
+              <>
+                <ProjectSkeleton />
+                <ProjectSkeleton />
+                <ProjectSkeleton />
+              </>
+            ) : error ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-16"
+              >
+                <p className="text-destructive mb-4">{error}</p>
+                <Button onClick={() => window.location.reload()}>Retry</Button>
+              </motion.div>
+            ) : projects.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -162,7 +226,7 @@ const Projects = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={(e) => deleteProject(project.id, e)}
+                      onClick={(e) => handleDeleteProject(project.id, e)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
                       <Trash2 className="w-4 h-4" />
