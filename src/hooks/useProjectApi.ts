@@ -1,6 +1,6 @@
 import { useAuth0 } from "@auth0/auth0-react";
 
-const API_URL = "https://ideal-garbanzo-6p5q4j4x97p3wpq-5000.app.github.dev/api";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export interface Project {
   id: string;
