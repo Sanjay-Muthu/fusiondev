@@ -1,10 +1,28 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { useAuth0 } from "@auth0/auth0-react";
 import { Button } from "@/components/ui/button";
-import { Sparkles } from "lucide-react";
+import { Sparkles, LogOut } from "lucide-react";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, loginWithRedirect, logout, user, isLoading } = useAuth0();
+
+  const handleSignIn = () => {
+    loginWithRedirect();
+  };
+
+  const handleSignUp = () => {
+    loginWithRedirect({
+      authorizationParams: {
+        screen_hint: "signup",
+      },
+    });
+  };
+
+  const handleLogout = () => {
+    logout({ logoutParams: { returnTo: window.location.origin } });
+  };
 
   return (
     <motion.nav
@@ -36,12 +54,31 @@ const Navbar = () => {
 
         {/* CTA */}
         <div className="flex items-center gap-4">
-          <Button variant="ghost" className="hidden sm:inline-flex">
-            Sign In
-          </Button>
-          <Button size="sm" onClick={() => navigate("/projects")}>
-            Get Started
-          </Button>
+          {isLoading ? (
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+          ) : isAuthenticated ? (
+            <>
+              <span className="hidden sm:inline-flex text-sm text-muted-foreground">
+                {user?.name || user?.email}
+              </span>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/projects")}>
+                Projects
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" className="hidden sm:inline-flex" onClick={handleSignIn}>
+                Sign In
+              </Button>
+              <Button size="sm" onClick={handleSignUp}>
+                Get Started
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </motion.nav>
