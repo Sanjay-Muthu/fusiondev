@@ -4,22 +4,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Send, Sparkles, Loader2, GripVertical } from "lucide-react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { useProjectApi } from "@/hooks/useProjectApi";
-
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-}
-
-interface Project {
-  id: string;
-  name: string;
-  createdAt: Date;
-}
+import { useProjectApi, Message, Project } from "@/hooks/useProjectApi";
+import { useAuth0 } from "@auth0/auth0-react";
 
 const ProjectDetail = () => {
   const { projectId } = useParams();
+  const userId = useAuth0().user?.sub.split("|")[1] || "";
   const navigate = useNavigate();
   const { sendMessage: apiSendMessage, getProjectfromID } = useProjectApi();
   const [project, setProject] = useState<Project | null>(null);
@@ -46,30 +36,22 @@ const ProjectDetail = () => {
     if (!input.trim() || isLoading) return;
 
     const userMessage: Message = {
-      id: crypto.randomUUID(),
+      userId: userId,
+      projectId: projectId,
+      messageId: crypto.randomUUID(),
       role: "user",
       content: input.trim(),
+      timestamp: new Date()
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
 
-    // Call API when message is sent
-    if (projectId) {
-      await apiSendMessage(projectId, userMessage.content);
-    }
+    const resp = await apiSendMessage(userMessage);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: `I understand you want to: "${userMessage.content}". I'm working on generating the code for your request. This feature will be fully functional soon!`,
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-      setIsLoading(false);
-    }, 1500);
+    setMessages((prev) => [...prev, resp]);
+    setIsLoading(false);
   };
 
   if (!project) {
@@ -124,7 +106,7 @@ const ProjectDetail = () => {
               ) : (
                 messages.map((message) => (
                   <motion.div
-                    key={message.id}
+                    key={message.messageId}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className={`flex ${

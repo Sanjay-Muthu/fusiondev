@@ -56,9 +56,10 @@ const Projects = () => {
 
     setIsSubmitting(true);
 
-    try {
-      await createProject(projectId, projectName);
-      
+    const resp: boolean = await createProject(projectId, projectName);
+    
+    if (resp)
+    {
       const newProject: Project = {
         id: projectId,
         name: projectName,
@@ -69,21 +70,23 @@ const Projects = () => {
       setNewProjectName("");
       setIsCreating(false);
       toast.success("Project created successfully!");
-    } catch (err) {
+    } else {
       toast.error("Failed to create project. Please try again.");
-    } finally {
-      setIsSubmitting(false);
     }
+
+    setIsSubmitting(false);
   };
 
   const handleDeleteProject = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
 
-    try {
-      await deleteProject(id);
-      setProjects(projects.filter((p) => p.id !== id));
-      toast.success("Project deleted");
-    } catch (err) {
+    const resp: boolean = await deleteProject(id);
+
+    if (resp) {
+
+    setProjects(projects.filter((p) => p.id !== id));
+    toast.success("Project deleted");
+    } else {
       toast.error("Failed to delete project");
     }
   };

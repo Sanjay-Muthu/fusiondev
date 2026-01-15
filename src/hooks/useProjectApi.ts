@@ -1,4 +1,3 @@
-import ProjectDetail from "@/pages/ProjectDetail";
 import { useAuth0 } from "@auth0/auth0-react";
 import { createClient } from "@supabase/supabase-js";
 
@@ -9,6 +8,15 @@ export interface Project {
   id: string;
   name: string;
   createdAt: Date;
+}
+
+export interface Message {
+  userId: string;
+  projectId: string;
+  messageId: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
 }
 
 export const useProjectApi = () => {
@@ -26,9 +34,11 @@ export const useProjectApi = () => {
       throw new Error(error.message);
     }
 
-    return data.map((p) => ({id: p.project_id,
+    return data.map((p) => ({
+      id: p.project_id,
       name: p.project_name,
-      createdAt: new Date(p.created_at)}));
+      createdAt: new Date(p.created_at)
+    }));
   };
 
   const getProjectfromID = async (projectID: string): Promise<Project> => {
@@ -51,80 +61,98 @@ export const useProjectApi = () => {
   }
 
   const createProject = async (projectId: string, projectName: string): Promise<boolean> => {
-    try {
-      const response = await fetch(`${API_URL}/create_project`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          project_id: projectId,
-          project_name: projectName,
+    const { data, error } = await supabase
+      .from("projects")
+      .insert([
+        {
           user_id: userId,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to create project: ${response.status}`);
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Error creating project:", error);
-      throw error;
-    }
-  };
-
-  const deleteProject = async (projectId: string): Promise<boolean> => {
-    try {
-      const response = await fetch(`${API_URL}/delete_project`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
           project_id: projectId,
-          user_id: userId,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete project: ${response.status}`);
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Error deleting project:", error);
-      throw error;
-    }
-  };
-
-  const sendMessage = async (projectId: string, messageContent: string): Promise<boolean> => {
-    try {
-      const response = await fetch(`${API_URL}/message_sent`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          project_id: projectId,
-          message_content: messageContent,
-          user_id: userId,
-        }),
-      });
-
-      return response.ok;
-    } catch (error) {
-      console.error("Error sending message:", error);
+          project_name: projectName
+        }
+      ]);
+    
+    if (error) {
+      console.error("Failed to insert into Supabase", error)
       return false;
     }
+
+    return true;
+  }
+
+  const deleteProject = async (projectId: string): Promise<boolean> => {
+    const { data, error } = await supabase
+      .from("projects")
+      .delete()
+      .eq("project_id", projectId)
+      .eq("user_id", userId);
+    
+    if (error) {
+      console.error("Failed to delete from Supabase", error)
+      throw new Error(error.message);
+    }
+
+    return true;
+  }
+
+  const viewMessages = async (projectId: string, userId: string): Promise<Message[]> => {
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("project_id", projectId);
+    
+    if (error) {
+      console.error("Failed to read messages from Supabase", error)
+      throw new Error(error.message);
+    }
+
+    return data.map((m) => ({
+      userId: m.user_id,
+      projectId: m.project_id,
+      messageId: m.message_id,
+      role: m.role,
+      content: m.content,
+      timestamp: new Date(m.sent_at)
+    }));
   };
+
+  const sendMessage = async (message: Message): Promise<Message> => {
+    const { data, error } = await supabase
+      .from("messages")
+      .insert([
+        {
+          user_id: message.userId,
+          project_id: message.projectId,
+          message_id: message.messageId,
+          role: message.role,
+          content: message.content,
+          sent_at: message.timestamp
+        }
+      ])
+      .select()
+      .single();
+    
+      if (error) {
+        console.error("Failed to insert message into Supabase", error)
+        throw new Error(error.message);
+      }
+
+    return {
+      userId: data.user_id,
+      projectId: data.project_id,
+      messageId: data.message_id,
+      role: data.role,
+      content: data.content,
+      timestamp: new Date(data.sent_at)
+    };
+  }
 
   return {
     viewProjects,
     getProjectfromID,
     createProject,
     deleteProject,
+    viewMessages,
     sendMessage,
   };
 };
