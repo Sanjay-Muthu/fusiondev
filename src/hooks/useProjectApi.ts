@@ -1,6 +1,9 @@
+import ProjectDetail from "@/pages/ProjectDetail";
 import { useAuth0 } from "@auth0/auth0-react";
+import { createClient } from "@supabase/supabase-js";
 
 const API_URL = import.meta.env.VITE_API_URL;
+const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 export interface Project {
   id: string;
@@ -8,38 +11,44 @@ export interface Project {
   createdAt: Date;
 }
 
-interface ViewProjectsResponse {
-  projects: Project[];
-}
-
 export const useProjectApi = () => {
   const { user } = useAuth0();
   const userId = user?.sub.split("|")[1] || "";
 
   const viewProjects = async (): Promise<Project[]> => {
-    try {
-      const response = await fetch(`${API_URL}/view_projects`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ user_id: userId }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch projects: ${response.status}`);
-      }
-
-      const data: ViewProjectsResponse = await response.json();
-      return data.projects.map((p) => ({
-        ...p,
-        createdAt: new Date(p.createdAt),
-      }));
-    } catch (error) {
-      console.error("Error fetching projects:", error);
-      throw error;
+    const { data, error } = await supabase
+      .from("projects")
+      .select("*")
+      .eq("user_id", userId)
+    
+    if (error) {
+      console.error("Failed to read from Supabase", error)
+      throw new Error(error.message);
     }
+
+    return data.map((p) => ({id: p.project_id,
+      name: p.project_name,
+      createdAt: new Date(p.created_at)}));
   };
+
+  const getProjectfromID = async (projectID: string): Promise<Project> => {
+    const { data, error } = await supabase
+      .from("projects")
+      .select("*")
+      .eq("project_id", projectID)
+      .single();
+    
+    if (error) {
+      console.error("Failed to read from Supabase", error)
+      throw new Error(error.message);
+    }
+
+    return {
+      id: data.project_id,
+      name: data.project_name,
+      createdAt: new Date(data.created_at)
+    };
+  }
 
   const createProject = async (projectId: string, projectName: string): Promise<boolean> => {
     try {
@@ -93,7 +102,7 @@ export const useProjectApi = () => {
   const sendMessage = async (projectId: string, messageContent: string): Promise<boolean> => {
     try {
       const response = await fetch(`${API_URL}/message_sent`, {
-        method: "POST",
+        method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
@@ -113,6 +122,7 @@ export const useProjectApi = () => {
 
   return {
     viewProjects,
+    getProjectfromID,
     createProject,
     deleteProject,
     sendMessage,

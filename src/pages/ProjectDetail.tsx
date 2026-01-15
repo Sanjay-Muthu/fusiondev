@@ -21,7 +21,7 @@ interface Project {
 const ProjectDetail = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { sendMessage: apiSendMessage } = useProjectApi();
+  const { sendMessage: apiSendMessage, getProjectfromID } = useProjectApi();
   const [project, setProject] = useState<Project | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -29,19 +29,14 @@ const ProjectDetail = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem("fusion-projects");
-    if (saved) {
-      const projects: Project[] = JSON.parse(saved);
-      const found = projects.find((p) => p.id === projectId);
-      if (found) {
-        setProject(found);
-      } else {
-        navigate("/projects");
+    const fetchProject = async () => {
+      if (projectId) {
+        setProject(await getProjectfromID(projectId));
       }
-    } else {
-      navigate("/projects");
     }
-  }, [projectId, navigate]);
+
+    fetchProject();
+  }, [projectId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
