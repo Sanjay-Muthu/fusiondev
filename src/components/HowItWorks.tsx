@@ -25,7 +25,7 @@ const steps = [
 
 const HowItWorks = () => {
   return (
-    <section className="relative py-24 overflow-hidden">
+    <section id="how-it-works" className="relative py-24 overflow-hidden">
       {/* Background accent */}
       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-72 h-72 glow-orb opacity-30" />
       
