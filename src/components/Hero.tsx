@@ -40,8 +40,8 @@ const Hero = () => {
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-            From concept to MVP in record time. Build your own projects smarter and faster 
-            with AI that understands your vision and brings it to life.
+            Transform your ideas into stunning websites and applications.
+            Just describe what you want, and watch Fusion Dev bring it to life.
           </p>
 
           {/* CTA Buttons */}
